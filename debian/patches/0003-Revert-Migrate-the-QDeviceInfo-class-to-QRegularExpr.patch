@@ -1,0 +1,125 @@
+From 3eef9a6480ca0220a8b2fd16b73a1bfb6c6adc51 Mon Sep 17 00:00:00 2001
+From: Marius Gripsgard <marius@ubports.com>
+Date: Thu, 5 Mar 2020 00:10:56 +0100
+Subject: [PATCH 3/3] Revert "Migrate the QDeviceInfo class to
+ QRegularExpression"
+
+This reverts commit edf52a175c324e8b0defd8e216dd2bfd53547bd6.
+---
+ src/systeminfo/qdeviceinfo.cpp                |  2 +
+ .../qdeviceinfo/tst_qdeviceinfo.cpp           | 39 +++++++------------
+ 2 files changed, 16 insertions(+), 25 deletions(-)
+
+diff --git a/src/systeminfo/qdeviceinfo.cpp b/src/systeminfo/qdeviceinfo.cpp
+index 63a6a79..20ebec4 100644
+--- a/src/systeminfo/qdeviceinfo.cpp
++++ b/src/systeminfo/qdeviceinfo.cpp
+@@ -165,7 +165,9 @@ QDeviceInfo::QDeviceInfo(QObject *parent)
+ */
+ QDeviceInfo::~QDeviceInfo()
+ {
++#if !defined(Q_OS_LINUX)
+     delete d_ptr;
++#endif
+ }
+ 
+ /*!
+diff --git a/tests/auto/systeminfo/qdeviceinfo/tst_qdeviceinfo.cpp b/tests/auto/systeminfo/qdeviceinfo/tst_qdeviceinfo.cpp
+index d2ad950..d843ec9 100644
+--- a/tests/auto/systeminfo/qdeviceinfo/tst_qdeviceinfo.cpp
++++ b/tests/auto/systeminfo/qdeviceinfo/tst_qdeviceinfo.cpp
+@@ -26,7 +26,6 @@
+ **
+ ****************************************************************************/
+ 
+-#include <QtCore/qregularexpression.h>
+ #include <QtTest/qtest.h>
+ #include "qdeviceinfo.h"
+ 
+@@ -36,9 +35,6 @@ class tst_QDeviceInfo : public QObject
+ {
+     Q_OBJECT
+ 
+-private:
+-    bool hasExactMatch(const QString& needle, const QString& haystack);
+-
+ private slots:
+     void initTestCase();
+     void cleanupTestCase();
+@@ -58,12 +54,6 @@ private:
+ 
+ };
+ 
+-bool tst_QDeviceInfo::hasExactMatch(const QString& needle, const QString& haystack)
+-{
+-    QRegularExpression pattern(QRegularExpression::anchoredPattern(needle));
+-    return pattern.match(haystack).hasMatch();
+-}
+-
+ void tst_QDeviceInfo::initTestCase()
+ {
+     deviceInfo = new QDeviceInfo();
+@@ -82,9 +72,9 @@ void tst_QDeviceInfo::tst_imei()
+     QVERIFY(deviceInfo->imei(-1).isEmpty());
+     QVERIFY(deviceInfo->imei(imeiCount).isEmpty());
+ 
+-    QRegularExpression imeiPattern(QRegularExpression::anchoredPattern("(\\d{0,0}|\\d{15,15})"));
++    QRegExp imeiPattern("(\\d{0,0}|\\d{15,15})");
+     for (int i = 0; i < imeiCount; ++i)
+-        QVERIFY(imeiPattern.match(deviceInfo->imei(i)).hasMatch());
++        QVERIFY(imeiPattern.exactMatch(deviceInfo->imei(i)));
+ }
+ 
+ void tst_QDeviceInfo::tst_lockTypes()
+@@ -97,36 +87,35 @@ void tst_QDeviceInfo::tst_lockTypes()
+ 
+ void tst_QDeviceInfo::tst_version()
+ {
+-    QVERIFY(hasExactMatch(QString::fromLatin1("(\\d+(\\.\\d+)*)?"),
+-                          deviceInfo->version(QDeviceInfo::Os)));
++    QRegExp osversion(QString::fromLatin1("(\\d+(\\.\\d+)*)?"));
++    QVERIFY(osversion.exactMatch(deviceInfo->version(QDeviceInfo::Os)));
+ 
+-    QVERIFY(hasExactMatch(QString::fromLatin1(".*"),
+-                          deviceInfo->version(QDeviceInfo::Firmware)));
++    QRegExp firmwareversion(QString::fromLatin1(".*"));
++    QVERIFY(firmwareversion.exactMatch(deviceInfo->version(QDeviceInfo::Firmware)));
+ }
+ 
+ void tst_QDeviceInfo::tst_manufacturer()
+ {
+-    QVERIFY(hasExactMatch(QString::fromLatin1(".*"),
+-            deviceInfo->manufacturer()));
++    QRegExp manufacturer(".*");
++    QVERIFY(manufacturer.exactMatch(deviceInfo->manufacturer()));
+ }
+ 
+ void tst_QDeviceInfo::tst_model()
+ {
+-    QVERIFY(hasExactMatch(QString::fromLatin1(".*"),
+-            deviceInfo->model()));
++    QRegExp model(".*");
++    QVERIFY(model.exactMatch(deviceInfo->model()));
+ }
+ 
+ void tst_QDeviceInfo::tst_productName()
+ {
+-    QVERIFY(hasExactMatch(QString::fromLatin1(".*"),
+-            deviceInfo->productName()));
+-
++    QRegExp productName(".*");
++    QVERIFY(productName.exactMatch(deviceInfo->productName()));
+ }
+ 
+ void tst_QDeviceInfo::tst_uniqueDeviceID()
+ {
+-    QVERIFY(hasExactMatch(QString::fromLatin1("[A-Fa-f\\d-]*"),
+-            deviceInfo->uniqueDeviceID()));
++    QRegExp uniqueId("[A-Fa-f\\d-]*");
++    QVERIFY(uniqueId.exactMatch(deviceInfo->uniqueDeviceID()));
+ }
+ 
+ void tst_QDeviceInfo::tst_hasFeature()
+-- 
+2.17.1
+

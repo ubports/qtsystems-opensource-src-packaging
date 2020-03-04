@@ -1,3 +1,7 @@
 build_with_udisk.patch
 skip_failing_tests.patch
 Fix-InputDeviceModel-on-Mir-count-property.patch
+
+# ONLY NEEDED FOR QT VERSIONS <= 5.12 as these functions was added in 5.12
+0003-Revert-Migrate-the-QDeviceInfo-class-to-QRegularExpr.patch
+
